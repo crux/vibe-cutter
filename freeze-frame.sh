@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =============================================================================
-# freeze-frame.sh
-# This script takes the last non-black frame of an input video, creates a
-# still frame video from it, and appends it to the original video (trimmed
-# to remove any trailing black frames).
+# freeze-frame.sh (Modular Version)
+# This script extracts the last non-black frame from an input video, and
+# creates a new video file containing only that freeze frame for a specified duration.
+# The input video is used only for probing encoding attributes.
 # Usage: ./freeze-frame.sh <input-video-file> <output-video-file> <freeze-frame-duration-seconds>
 # =============================================================================
 
@@ -20,10 +20,6 @@ fi
 INPUT_VIDEO="$1"
 OUTPUT_VIDEO="$2"
 FREEZE_FRAME_DURATION_SEC="$3"
-
-# Temporary directory
-TMP_DIR="./tmp"
-mkdir -p "$TMP_DIR"
 
 # --- Validate Binaries ---
 if ! command -v "$FFMPEG_BIN" &> /dev/null; then
@@ -42,7 +38,7 @@ if [ ! -f "$INPUT_VIDEO" ]; then
     exit 1
 fi
 
-echo "--- Creating Freeze Frame at End of Video (Last Non-Black Frame) ---"
+echo "--- Creating Freeze Frame Video from Last Non-Black Frame ---"
 
 # --- Query Video and Audio Parameters ---
 echo "Querying parameters from '$INPUT_VIDEO'..."
@@ -60,14 +56,11 @@ fi
 
 FFMPEG_SIZE=$(echo "$VIDEO_SIZE" | sed 's/,/x/')
 
-# Temporary files
-TEMP_TRIMMED_INPUT_VIDEO="${TMP_DIR}/temp_trimmed_input_${RANDOM}.mp4"
-TEMP_LAST_CONTENT_FRAME_PNG="${TMP_DIR}/temp_last_content_frame_${RANDOM}.png"
-TEMP_FREEZE_FRAME_VIDEO="${TMP_DIR}/temp_freeze_frame_video_${RANDOM}.mp4"
-CONCAT_LIST_FILE="${TMP_DIR}/temp_concat_list_${RANDOM}.txt"
+# Temporary files (created in the current working directory, which will be tmp/)
+TEMP_LAST_CONTENT_FRAME_PNG="temp_last_content_frame_${RANDOM}.png"
 
-# --- Detect Trailing Black and Trim Video ---
-echo "Detecting trailing black frames and trimming video..."
+# --- Detect Trailing Black to find the actual end of content ---
+echo "Detecting trailing black frames to find the last content frame..."
 
 DURATION=$("$FFPROBE_BIN" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$INPUT_VIDEO")
 
@@ -75,32 +68,23 @@ BLACK_DETECT_OUTPUT=$("$FFMPEG_BIN" -i "$INPUT_VIDEO" -vf "blackdetect=d=0.1:pix
 
 LAST_CONTENT_END_TIME="$DURATION"
 if [ -n "$BLACK_DETECT_OUTPUT" ]; then
-    # Get the start time of the last detected black segment
     LAST_BLACK_START=$(echo "$BLACK_DETECT_OUTPUT" | tail -n1 | sed -n 's/.*black_start:\([0-9.]*\).*/\1/p')
-    if [ -n "$LAST_BLACK_START" ]; then
-        LAST_CONTENT_END_TIME="$LAST_BLACK_START"
+    LAST_BLACK_END=$(echo "$BLACK_DETECT_OUTPUT" | tail -n1 | sed -n 's/.*black_end:\([0-9.]*\).*/\1/p')
+
+    if [ -n "$LAST_BLACK_START" ] && [ -n "$LAST_BLACK_END" ]; then
+        if (( $(echo "$LAST_BLACK_START == 0" | bc -l) )) && (( $(echo "$LAST_BLACK_END < $DURATION" | bc -l) )); then
+            echo "Detected leading black segment, ignoring for end-of-content frame extraction."
+        else
+            LAST_CONTENT_END_TIME="$LAST_BLACK_START"
+        fi
     fi
 fi
 
-echo "Original video content ends at: ${LAST_CONTENT_END_TIME}s"
-
-# Trim the input video to the last non-black frame
-"$FFMPEG_BIN" -y \
-              -i "$INPUT_VIDEO" \
-              -t "$LAST_CONTENT_END_TIME" \
-              -c:v libx264 -preset medium -crf 23 \
-              -c:a aac -b:a ${YOUTUBE_AUDIO_BITRATE} -ar ${AUDIO_SAMPLE_RATE} \
-              "$TEMP_TRIMMED_INPUT_VIDEO"
-
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to trim input video. FFmpeg command exited with an error."
-    rm -f "$TEMP_TRIMMED_INPUT_VIDEO"
-    exit 1
-fi
+echo "Last non-black content frame is at approximately: ${LAST_CONTENT_END_TIME}s"
 
 # --- Extract Last Content Frame ---
 echo "Extracting last content frame to '$TEMP_LAST_CONTENT_FRAME_PNG'..."
-# Seek to 0.1 seconds before the detected LAST_CONTENT_END_TIME from the original video
+# Seek to 0.1 seconds before the detected LAST_CONTENT_END_TIME from the *original* video
 SEEK_TIME=$(echo "$LAST_CONTENT_END_TIME - 0.1" | bc)
 if (( $(echo "$SEEK_TIME < 0" | bc -l) )); then
     SEEK_TIME=0
@@ -110,12 +94,12 @@ fi
 
 if [ $? -ne 0 ]; then
     echo "Error: Failed to extract last content frame. FFmpeg command exited with an error."
-    rm -f "$TEMP_TRIMMED_INPUT_VIDEO" "$TEMP_LAST_CONTENT_FRAME_PNG"
+    rm -f "$TEMP_LAST_CONTENT_FRAME_PNG"
     exit 1
 fi
 
 # --- Create Freeze Frame Video from Last Content Frame ---
-echo "Creating freeze frame video ('$TEMP_FREEZE_FRAME_VIDEO') from last content frame for ${FREEZE_FRAME_DURATION_SEC} seconds..."
+echo "Creating freeze frame video ('$OUTPUT_VIDEO') from last content frame for ${FREEZE_FRAME_DURATION_SEC} seconds..."
 
 FREEZE_FRAME_AUDIO_OPTIONS=""
 if [ -n "$AUDIO_CH_LAYOUT" ]; then
@@ -130,49 +114,16 @@ fi
               -pix_fmt "$VIDEO_PIX_FMT" \
               -r $VIDEO_FPS \
               -shortest \
-              "$TEMP_FREEZE_FRAME_VIDEO"
-
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to create freeze frame video. FFmpeg command exited with an error."
-    rm -f "$TEMP_TRIMMED_INPUT_VIDEO" "$TEMP_LAST_CONTENT_FRAME_PNG" "$TEMP_FREEZE_FRAME_VIDEO"
-    exit 1
-fi
-
-# --- Create Concatenation List ---
-echo "Creating concatenation list file ('$CONCAT_LIST_FILE')..."
-echo "file '$TEMP_TRIMMED_INPUT_VIDEO'" > "$CONCAT_LIST_FILE"
-echo "file '$TEMP_FREEZE_FRAME_VIDEO'" >> "$CONCAT_LIST_FILE"
-
-if [ $? -ne 0 ]; then
-    echo "Error creating concatenation list file."
-    rm -f "$TEMP_TRIMMED_INPUT_VIDEO" "$TEMP_LAST_CONTENT_FRAME_PNG" "$TEMP_FREEZE_FRAME_VIDEO" "$CONCAT_LIST_FILE"
-    exit 1
-fi
-
-# --- Concatenate Videos ---
-echo "Concatenating trimmed original video and freeze frame into '$OUTPUT_VIDEO'..."
-
-FINAL_AUDIO_OPTIONS=""
-if [ -n "$AUDIO_CH_LAYOUT" ]; then
-    FINAL_AUDIO_OPTIONS="-c:a aac -b:a ${YOUTUBE_AUDIO_BITRATE} -ar ${AUDIO_SAMPLE_RATE}"
-fi
-
-"$FFMPEG_BIN" -y \
-              -f concat \
-              -safe 0 \
-              -i "$CONCAT_LIST_FILE" \
-              -c:v libx264 -preset medium -crf 23 \
-              ${FINAL_AUDIO_OPTIONS} \
               "$OUTPUT_VIDEO"
 
 if [ $? -ne 0 ]; then
-    echo "Error: Video concatenation failed. FFmpeg command exited with an error."
-    rm -f "$TEMP_TRIMMED_INPUT_VIDEO" "$TEMP_LAST_CONTENT_FRAME_PNG" "$TEMP_FREEZE_FRAME_VIDEO" "$CONCAT_LIST_FILE"
+    echo "Error: Failed to create freeze frame video. FFmpeg command exited with an error."
+    rm -f "$TEMP_LAST_CONTENT_FRAME_PNG"
     exit 1
 fi
 
 # --- Clean Up Temporary Files ---
 echo "Cleaning up temporary files..."
-rm -f "$TEMP_TRIMMED_INPUT_VIDEO" "$TEMP_LAST_CONTENT_FRAME_PNG" "$TEMP_FREEZE_FRAME_VIDEO" "$CONCAT_LIST_FILE"
+rm -f "$TEMP_LAST_CONTENT_FRAME_PNG"
 
-echo "✅ Freeze frame added successfully. Output saved to '$OUTPUT_VIDEO'"
+echo "✅ Freeze frame video created successfully. Output saved to '$OUTPUT_VIDEO'"

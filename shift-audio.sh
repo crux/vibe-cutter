@@ -21,10 +21,6 @@ OUTPUT_VIDEO="$2"
 SHIFT_AMOUNT_SEC="$3"
 SHIFT_AMOUNT_MS=$(echo "$SHIFT_AMOUNT_SEC * 1000" | bc)
 
-# Temporary directory
-TMP_DIR="./tmp"
-mkdir -p "$TMP_DIR"
-
 # --- Validate Binaries ---
 if ! command -v "$FFMPEG_BIN" &> /dev/null; then
     echo "Error: $FFMPEG_BIN command not found. Please install FFmpeg."
@@ -61,9 +57,9 @@ fi
 
 FFMPEG_SIZE=$(echo "$VIDEO_SIZE" | sed 's/,/x/')
 
-# Temporary files
-TEMP_VIDEO_EXTENDED="${TMP_DIR}/temp_video_extended_${RANDOM}.mp4"
-TEMP_AUDIO_DELAYED="${TMP_DIR}/temp_audio_delayed_${RANDOM}.aac"
+# Temporary files (created in the current working directory, which will be tmp/)
+TEMP_VIDEO_EXTENDED="temp_video_extended_${RANDOM}.mp4"
+TEMP_AUDIO_DELAYED="temp_audio_delayed_${RANDOM}.aac"
 
 # --- Extend Video with black frames ---
 echo "Extending video with ${SHIFT_AMOUNT_SEC} second(s) of black frames..."
@@ -111,7 +107,7 @@ if [ -n "$AUDIO_CH_LAYOUT" ]; then
         echo "Error: Audio delay processing failed. FFmpeg command exited with an error."
         rm -f "$TEMP_VIDEO_EXTENDED" "$TEMP_AUDIO_DELAYED"
         exit 1
-fi
+    fi
 fi
 
 # --- Combine Video and Audio ---

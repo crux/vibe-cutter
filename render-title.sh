@@ -19,10 +19,6 @@ fi
 INPUT_VIDEO="$1"
 OUTPUT_VIDEO="$2"
 
-# Temporary directory
-TMP_DIR="./tmp"
-mkdir -p "$TMP_DIR"
-
 # --- Validate Inputs ---
 if [ ! -f "$INPUT_VIDEO" ]; then
     echo "Error: Input video file not found: '$INPUT_VIDEO'"

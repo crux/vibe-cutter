@@ -18,10 +18,6 @@ fi
 INPUT_VIDEO="$1"
 OUTPUT_VIDEO="$2"
 
-# Temporary directory
-TMP_DIR="./tmp"
-mkdir -p "$TMP_DIR"
-
 # --- Validate Inputs ---
 if [ ! -f "$INPUT_VIDEO" ]; then
     echo "Error: Input video file not found: '$INPUT_VIDEO'"
@@ -44,7 +40,7 @@ echo "--- Trimming Video to First Scene Change ---"
 echo "Detecting the first scene change in '$INPUT_VIDEO'..."
 
 # First, find the end of any initial black frames
-BLACK_DETECT_OUTPUT=("$FFMPEG_BIN" -i "$INPUT_VIDEO" -vf "blackdetect=d=0.1:pix_th=0.20" -an -f null - 2>&1 | grep 'black_start')
+BLACK_DETECT_OUTPUT=$("$FFMPEG_BIN" -i "$INPUT_VIDEO" -vf "blackdetect=d=0.1:pix_th=0.20" -an -f null - 2>&1 | grep 'black_start')
 
 BLACK_END_TIME="0"
 if [ -n "$BLACK_DETECT_OUTPUT" ]; then
@@ -56,7 +52,7 @@ fi
 echo "Black frames end at: ${BLACK_END_TIME}s"
 
 # Now, find the next scene change after the black frames
-SCENE_DETECT_OUTPUT=("$FFMPEG_BIN" -ss "$BLACK_END_TIME" -i "$INPUT_VIDEO" -vf "select='gt(scene,0.4)',showinfo" -f null - 2>&1 | grep 'pts_time')
+SCENE_DETECT_OUTPUT=$("$FFMPEG_BIN" -ss "$BLACK_END_TIME" -i "$INPUT_VIDEO" -vf "select='gt(scene,0.4)',showinfo" -f null - 2>&1 | grep 'pts_time')
 
 TRIM_START_TIME=$BLACK_END_TIME
 if [ -n "$SCENE_DETECT_OUTPUT" ]; then
@@ -70,15 +66,22 @@ echo "First fullscreen content frame detected at: ${TRIM_START_TIME}s"
 # --- Trim the Video ---
 echo "Trimming '$INPUT_VIDEO' from ${TRIM_START_TIME}s to '$OUTPUT_VIDEO'..."
 
-"$FFMPEG_BIN" -y \
-              -ss "$TRIM_START_TIME" \
-              -i "$INPUT_VIDEO" \
-              -c copy \
-              "$OUTPUT_VIDEO"
+if (( $(echo "$TRIM_START_TIME == 0" | bc -l) )); then
+    echo "Debug: TRIM_START_TIME is 0. Copying original video."
+    cp "$INPUT_VIDEO" "$OUTPUT_VIDEO"
+else
+    echo "Debug: TRIM_START_TIME is not 0. Trimming with ffmpeg."
+    "$FFMPEG_BIN" -y \
+                  -ss "$TRIM_START_TIME" \
+                  -i "$INPUT_VIDEO" \
+                  -c copy \
+                  "$OUTPUT_VIDEO"
+fi
 
 if [ $? -ne 0 ]; then
     echo "Error: Video trimming failed. FFmpeg command exited with an error."
     exit 1
 fi
+
 
 echo "✅ Video trimmed successfully to '$OUTPUT_VIDEO'"
