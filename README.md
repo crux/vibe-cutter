@@ -24,9 +24,15 @@ These scripts require `FFmpeg` and `FFprobe` to be installed and accessible in y
 
 All configurable variables for the scripts are managed in a single `.env` file located in the root directory of this project. This approach allows for easy customization without modifying the scripts directly.
 
+An example configuration file, `.env.example`, is provided. To get started, copy this file to `.env` and modify the values as needed:
+
+```bash
+cp .env.example .env
+```
+
 Variables are organized into sections. You can override any default value by setting the corresponding environment variable in your shell before running a script (e.g., `export TITLE_DURATION_SEC=10`).
 
-**`.env` file structure:**
+**`.env` file structure (from `.env.example`):**
 
 ```ini
 # Consolidated Environment Variables for Video Scripts
