@@ -20,6 +20,10 @@ INPUT_VIDEO_MAIN="$2"
 INPUT_VIDEO_CREDITS="$3"
 OUTPUT_VIDEO="$4"
 
+# Temporary directory
+TMP_DIR="./tmp"
+mkdir -p "$TMP_DIR"
+
 # --- Validate Inputs ---
 if [ ! -f "$INPUT_VIDEO_TITLE" ]; then
     echo "Error: Title video file not found: '$INPUT_VIDEO_TITLE'"
@@ -42,7 +46,7 @@ if ! command -v "$FFMPEG_BIN" &> /dev/null; then
 fi
 
 # Temporary file for concatenation list
-CONCAT_LIST_FILE="temp_final_concat_list_${RANDOM}.txt"
+CONCAT_LIST_FILE="${TMP_DIR}/temp_final_concat_list_${RANDOM}.txt"
 
 # --- Create Concatenation List File ---
 echo "Creating concatenation list file ('$CONCAT_LIST_FILE')..."

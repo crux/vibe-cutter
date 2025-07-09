@@ -19,6 +19,10 @@ fi
 INPUT_VIDEO="$1"
 OUTPUT_VIDEO="$2"
 
+# Temporary directory
+TMP_DIR="./tmp"
+mkdir -p "$TMP_DIR"
+
 # --- Validate Inputs ---
 if [ ! -f "$INPUT_VIDEO" ]; then
     echo "Error: Input video file not found: '$INPUT_VIDEO'"
@@ -37,8 +41,8 @@ if [ -n "$TITLE_TEXT_LINE2" ] && [ ! -f "$FONT_ROBOTO_MONO" ]; then
     exit 1
 fi
 
-FFMPEG_BIN="ffmpeg"
-FFPROBE_BIN="ffprobe"
+FFMPEG_BIN="${FFMPEG_BIN}"
+FFPROBE_BIN="${FFPROBE_BIN}"
 
 if ! command -v "$FFMPEG_BIN" &> /dev/null; then
     echo "Error: $FFMPEG_BIN command not found. Please install FFmpeg."

@@ -21,6 +21,10 @@ INPUT_VIDEO="$1"
 OUTPUT_VIDEO="$2"
 FREEZE_FRAME_DURATION_SEC="$3"
 
+# Temporary directory
+TMP_DIR="./tmp"
+mkdir -p "$TMP_DIR"
+
 # --- Validate Binaries ---
 if ! command -v "$FFMPEG_BIN" &> /dev/null; then
     echo "Error: $FFMPEG_BIN command not found. Please install FFmpeg."
@@ -57,10 +61,10 @@ fi
 FFMPEG_SIZE=$(echo "$VIDEO_SIZE" | sed 's/,/x/')
 
 # Temporary files
-TEMP_TRIMMED_INPUT_VIDEO="temp_trimmed_input_${RANDOM}.mp4"
-TEMP_LAST_CONTENT_FRAME_PNG="temp_last_content_frame_${RANDOM}.png"
-TEMP_FREEZE_FRAME_VIDEO="temp_freeze_frame_video_${RANDOM}.mp4"
-CONCAT_LIST_FILE="temp_concat_list_${RANDOM}.txt"
+TEMP_TRIMMED_INPUT_VIDEO="${TMP_DIR}/temp_trimmed_input_${RANDOM}.mp4"
+TEMP_LAST_CONTENT_FRAME_PNG="${TMP_DIR}/temp_last_content_frame_${RANDOM}.png"
+TEMP_FREEZE_FRAME_VIDEO="${TMP_DIR}/temp_freeze_frame_video_${RANDOM}.mp4"
+CONCAT_LIST_FILE="${TMP_DIR}/temp_concat_list_${RANDOM}.txt"
 
 # --- Detect Trailing Black and Trim Video ---
 echo "Detecting trailing black frames and trimming video..."

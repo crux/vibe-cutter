@@ -18,6 +18,10 @@ fi
 INPUT_VIDEO="$1"
 OUTPUT_VIDEO="$2"
 
+# Temporary directory
+TMP_DIR="./tmp"
+mkdir -p "$TMP_DIR"
+
 # --- Validate Inputs ---
 if [ ! -f "$INPUT_VIDEO" ]; then
     echo "Error: Input video file not found: '$INPUT_VIDEO'"
@@ -29,10 +33,10 @@ if ! command -v "$FFMPEG_BIN" &> /dev/null; then
     exit 1
 fi
 
-# if ! command -v "$FFPROBE_BIN" &> /dev/null; then
-#     echo "Error: $FFPROBE_BIN command not found. Please install FFmpeg (ffprobe is usually included)."
-#     exit 1
-# fi
+if ! command -v "$FFPROBE_BIN" &> /dev/null; then
+    echo "Error: $FFPROBE_BIN command not found. Please install FFmpeg (ffprobe is usually included)."
+    exit 1
+fi
 
 echo "--- Trimming Video to First Scene Change ---"
 
@@ -40,7 +44,7 @@ echo "--- Trimming Video to First Scene Change ---"
 echo "Detecting the first scene change in '$INPUT_VIDEO'..."
 
 # First, find the end of any initial black frames
-BLACK_DETECT_OUTPUT=$("$FFMPEG_BIN" -i "$INPUT_VIDEO" -vf "blackdetect=d=0.1:pix_th=0.20" -an -f null - 2>&1 | grep 'black_start')
+BLACK_DETECT_OUTPUT=("$FFMPEG_BIN" -i "$INPUT_VIDEO" -vf "blackdetect=d=0.1:pix_th=0.20" -an -f null - 2>&1 | grep 'black_start')
 
 BLACK_END_TIME="0"
 if [ -n "$BLACK_DETECT_OUTPUT" ]; then
@@ -52,7 +56,7 @@ fi
 echo "Black frames end at: ${BLACK_END_TIME}s"
 
 # Now, find the next scene change after the black frames
-SCENE_DETECT_OUTPUT=$("$FFMPEG_BIN" -ss "$BLACK_END_TIME" -i "$INPUT_VIDEO" -vf "select='gt(scene,0.4)',showinfo" -f null - 2>&1 | grep 'pts_time')
+SCENE_DETECT_OUTPUT=("$FFMPEG_BIN" -ss "$BLACK_END_TIME" -i "$INPUT_VIDEO" -vf "select='gt(scene,0.4)',showinfo" -f null - 2>&1 | grep 'pts_time')
 
 TRIM_START_TIME=$BLACK_END_TIME
 if [ -n "$SCENE_DETECT_OUTPUT" ]; then
