@@ -61,7 +61,7 @@ fi
 
 # --- 2.5. Add Preroll First Frame ---
 echo "Running preroll-first-frame.sh..."
-bash "${SCRIPT_DIR}/preroll-first-frame.sh" "$TRIMMED_VIDEO" "$PREROLLED_VIDEO" 2 # Preroll for 2 seconds
+bash "${SCRIPT_DIR}/preroll-first-frame.sh" "$TRIMMED_VIDEO" "$PREROLLED_VIDEO" "$PREROLL_FIRST_FRAME_TIME" # Preroll for 2 seconds
 if [ $? -ne 0 ]; then
     echo "Error: preroll-first-frame.sh failed. Aborting."
     exit 1
@@ -77,7 +77,7 @@ fi
 
 # --- 4. Generate Freeze Frame Credits ---
 echo "Running freeze-frame.sh..."
-bash "${SCRIPT_DIR}/freeze-frame.sh" "$INPUT_VIDEO" "$FREEZE_FRAME_VIDEO_TEMP" 4 # Freeze frame for 4 seconds
+bash "${SCRIPT_DIR}/freeze-frame.sh" "$INPUT_VIDEO" "$FREEZE_FRAME_VIDEO_TEMP" "$FREEZE_FRAME_HOLD_TIME" # Freeze frame for 4 seconds
 if [ $? -ne 0 ]; then
     echo "Error: freeze-frame.sh failed. Aborting."
     exit 1
