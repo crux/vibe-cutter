@@ -1,4 +1,4 @@
-# Video Processing Scripts
+# Video Processing Scripts, or How to be your own Vibe Cutter
 
 This repository contains a suite of modular shell scripts designed for various video processing tasks using FFmpeg. The scripts are designed to be flexible and configurable via a single `.env` file.
 
