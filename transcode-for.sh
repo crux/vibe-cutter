@@ -43,6 +43,14 @@ fi
 
 echo "--- Transcoding using parameters from $CONFIG_ENV_FILE ---"
 
+VIDEO_FILTER_OPTIONS=""
+if [ -n "$TARGET_RESOLUTION" ]; then
+    # Extract width and height from TARGET_RESOLUTION
+    TARGET_WIDTH=$(echo "$TARGET_RESOLUTION" | cut -d'x' -f1)
+    TARGET_HEIGHT=$(echo "$TARGET_RESOLUTION" | cut -d'x' -f2)
+    VIDEO_FILTER_OPTIONS="-vf scale='min(iw,${TARGET_WIDTH})':'min(ih,${TARGET_HEIGHT})':force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2"
+fi
+
 # Construct audio options
 AUDIO_OPTIONS=""
 if [ "$AUDIO_CODEC" == "copy" ]; then
@@ -64,6 +72,7 @@ fi
 "$FFMPEG_BIN" -y \
               -i "$INPUT_VIDEO" \
               -c:v libx264 -b:v "$VIDEO_BITRATE" -maxrate "$MAXRATE" -bufsize "$BUFSIZE" -preset "$PRESET" -crf "$CRF" \
+              ${VIDEO_FILTER_OPTIONS} \
               ${AUDIO_OPTIONS} \
               "$OUTPUT_VIDEO"
 
