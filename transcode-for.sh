@@ -12,15 +12,22 @@
 source .env
 
 # --- Argument Handling ---
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <config-env-file> <input-video> <output-video>"
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
+    echo "Usage: $0 <config-env-file> <input-video> <output-video> [duration-seconds]"
     echo "Example: $0 jellyfin.env input.mkv output.mkv"
+    echo "Example: $0 jellyfin.env input.mkv output.mkv 300 (for first 5 minutes)"
     exit 1
 fi
 
 CONFIG_ENV_FILE="$1"
 INPUT_VIDEO="$2"
 OUTPUT_VIDEO="$3"
+TRANSCODE_DURATION="$4"
+
+DURATION_OPTION=""
+if [ -n "$TRANSCODE_DURATION" ]; then
+    DURATION_OPTION="-t $TRANSCODE_DURATION"
+fi
 
 # Load transcoding parameters from the specified config .env file
 if [ ! -f "$CONFIG_ENV_FILE" ]; then
@@ -70,10 +77,13 @@ fi
 
 # FFmpeg command
 "$FFMPEG_BIN" -y \
-              -i "$INPUT_VIDEO" \
-              -c:v libx264 -b:v "$VIDEO_BITRATE" -maxrate "$MAXRATE" -bufsize "$BUFSIZE" -preset "$PRESET" -crf "$CRF" \
-              ${VIDEO_FILTER_OPTIONS} \
-              ${AUDIO_OPTIONS} \
+              -i "$INPUT_VIDEO"  \
+              -map 0:v -map 0:a  \
+              -c:v libx264 -b:v "$VIDEO_BITRATE" -maxrate "$MAXRATE" -bufsize "$BUFSIZE"  \
+              -preset "$PRESET" -crf "$CRF"  \
+              ${VIDEO_FILTER_OPTIONS}  \
+              ${DURATION_OPTION}  \
+              ${AUDIO_OPTIONS}  \
               "$OUTPUT_VIDEO"
 
 if [ $? -ne 0 ]; then
