@@ -107,6 +107,18 @@ Overlays a logo onto a video. The logo is cropped and resized as configured.
 
 **Usage:** `./logo-stamp.sh <input-video> <logo-png> <output-video>`
 
+### `transcode-for.sh`
+
+Transcodes a video file using FFmpeg with parameters loaded from a specified `.env` file. It now supports selective subtitle track inclusion based on language.
+
+**Usage:** `./transcode-for.sh <config-env-file> <input-video> <output-video> [duration-seconds]`
+
+### `transcode-extract-for.sh`
+
+Extracts key video parameters (resolution, bitrate) from a reference video file and generates a configuration file (`.env` format) suitable for use with the `transcode-for.sh` script.
+
+**Usage:** `./transcode-extract-for.sh <reference-video> <output-env-file>`
+
 ### `trim-to-first-cut.sh`
 
 Trims an input video to start at its first detected scene change (after any initial black frames).

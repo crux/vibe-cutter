@@ -75,11 +75,19 @@ else
     exit 1
 fi
 
+# Construct subtitle options
+SUBTITLE_MAPPING=""
+if [ -n "$SUBTITLE_LANGUAGE" ]; then    
+    SUBTITLE_MAPPING="-map 0:s:m:language:$SUBTITLE_LANGUAGE"
+else
+    SUBTITLE_MAPPING="-map 0:s"
+fi
+
 # FFmpeg command
 "$FFMPEG_BIN" -y \
               -i "$INPUT_VIDEO"  \
-              -map 0:v -map 0:a  \
-              -c:v libx264 -b:v "$VIDEO_BITRATE" -maxrate "$MAXRATE" -bufsize "$BUFSIZE"  \
+              -map 0:v -map 0:a ${SUBTITLE_MAPPING} \
+              -c:v libx264 \
               -preset "$PRESET" -crf "$CRF"  \
               ${VIDEO_FILTER_OPTIONS}  \
               ${DURATION_OPTION}  \
