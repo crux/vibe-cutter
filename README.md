@@ -14,6 +14,8 @@ This repository contains a suite of modular shell scripts designed for various v
   - [trim-to-first-cut.sh](#trim-to-first-cut.sh)
   - [shift-audio.sh](#shift-audio.sh)
   - [freeze-frame.sh](#freeze-frame.sh)
+  - [list-tracks.sh](#list-trackssh)
+  - [strip-tracks.sh](#strip-trackssh)
 - [Usage Examples](#usage-examples)
 
 ## Dependencies
@@ -136,6 +138,18 @@ Shifts the audio track of an input video by a specified amount (audio starts lat
 Takes the last non-black frame of an input video, creates a still frame video from it, and appends it to the original video (trimmed to remove any trailing black frames).
 
 **Usage:** `./freeze-frame.sh <input-video-file> <output-video-file> <freeze-frame-duration-seconds>`
+
+### `list-tracks.sh`
+
+Lists all tracks from a video file in a format that can be directly used with the `strip-tracks.sh` script.
+
+**Usage:** `./list-tracks.sh <input-video>`
+
+### `strip-tracks.sh`
+
+Strips all tracks but the ones specified from a video file. The output file's video and audio tracks are copied, not re-encoded.
+
+**Usage:** `./strip-tracks.sh <input-video> <output-video> [ <tracks-to-keep> ... ]`
 
 ## Usage Examples
 
