@@ -83,16 +83,21 @@ else
     SUBTITLE_MAPPING="-map 0:s"
 fi
 
+# Set video codec, defaulting to libx264
+TARGET_VIDEO_CODEC=${VIDEO_CODEC:-libx264}
+echo "--- Using video codec: $TARGET_VIDEO_CODEC ---"
+
 # FFmpeg command
 "$FFMPEG_BIN" -y \
               -i "$INPUT_VIDEO"  \
               -map 0:v -map 0:a ${SUBTITLE_MAPPING} \
-              -c:v libx264 \
+              -c:v "$TARGET_VIDEO_CODEC" \
               -preset "$PRESET" -crf "$CRF"  \
               ${VIDEO_FILTER_OPTIONS}  \
               ${DURATION_OPTION}  \
               ${AUDIO_OPTIONS}  \
               "$OUTPUT_VIDEO"
+
 
 if [ $? -ne 0 ]; then
     echo "Error: FFmpeg transcoding failed. Exit code $?."

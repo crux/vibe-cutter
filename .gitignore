@@ -9,6 +9,7 @@ tmp/
 
 # Session logs
 gemini-session.txt
+.gemini.*
 
 # User's personal notes
 x.*
