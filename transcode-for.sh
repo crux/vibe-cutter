@@ -75,23 +75,52 @@ else
     exit 1
 fi
 
+# Check if video has subtitle streams
+HAS_SUBTITLES=$("$FFPROBE_BIN" -v error -select_streams s -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 "$INPUT_VIDEO" 2>&1)
+
 # Construct subtitle options
 SUBTITLE_MAPPING=""
-if [ -n "$SUBTITLE_LANGUAGE" ]; then    
-    SUBTITLE_MAPPING="-map 0:s:m:language:$SUBTITLE_LANGUAGE"
+if [ -n "$HAS_SUBTITLES" ]; then
+    if [ -n "$SUBTITLE_LANGUAGE" ]; then
+        SUBTITLE_MAPPING="-map 0:s:m:language:$SUBTITLE_LANGUAGE"
+    else
+        SUBTITLE_MAPPING="-map 0:s"
+    fi
+    echo "--- Subtitle stream detected, will be processed ---"
 else
-    SUBTITLE_MAPPING="-map 0:s"
+    echo "--- No subtitle streams detected, skipping subtitles ---"
 fi
 
 # Set video codec, defaulting to libx264
 TARGET_VIDEO_CODEC=${VIDEO_CODEC:-libx264}
 echo "--- Using video codec: $TARGET_VIDEO_CODEC ---"
 
+# Check if video has audio stream
+HAS_AUDIO=$("$FFPROBE_BIN" -v error -select_streams a:0 -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 "$INPUT_VIDEO" 2>&1)
+
+# Construct mapping options based on available streams
+MAP_OPTIONS="-map 0:v"
+if [ -n "$HAS_AUDIO" ]; then
+    MAP_OPTIONS="$MAP_OPTIONS -map 0:a"
+    echo "--- Audio stream detected, will be processed ---"
+else
+    echo "--- No audio stream detected, skipping audio ---"
+    AUDIO_OPTIONS=""
+fi
+
+# Set codec tag for QuickTime compatibility when using h265
+CODEC_TAG_OPTIONS=""
+if [ "$TARGET_VIDEO_CODEC" == "libx265" ]; then
+    CODEC_TAG_OPTIONS="-tag:v hvc1"
+    echo "--- Setting QuickTime-compatible HEVC tag (hvc1) ---"
+fi
+
 # FFmpeg command
 "$FFMPEG_BIN" -y \
               -i "$INPUT_VIDEO"  \
-              -map 0:v -map 0:a ${SUBTITLE_MAPPING} \
+              ${MAP_OPTIONS} ${SUBTITLE_MAPPING} \
               -c:v "$TARGET_VIDEO_CODEC" \
+              ${CODEC_TAG_OPTIONS} \
               -preset "$PRESET" -crf "$CRF"  \
               ${VIDEO_FILTER_OPTIONS}  \
               ${DURATION_OPTION}  \
