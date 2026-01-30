@@ -58,6 +58,20 @@ if [ -n "$TARGET_RESOLUTION" ]; then
     VIDEO_FILTER_OPTIONS="-vf scale='min(iw,${TARGET_WIDTH})':'min(ih,${TARGET_HEIGHT})':force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2"
 fi
 
+# --- HDR to SDR Tone Mapping ---
+if [ "$ENABLE_TONEMAPPING" == "true" ]; then
+    echo "--- Enabling HDR to SDR tone mapping (Mobius Fallback Method) ---"
+    # This is a final attempt using the 'mobius' tonemapping algorithm,
+    # as other methods have failed with this specific file and FFmpeg build.
+    TONEMAP_FILTER="zscale=t=linear,tonemap=tonemap=mobius,format=yuv420p"
+    if [ -z "$VIDEO_FILTER_OPTIONS" ]; then
+        VIDEO_FILTER_OPTIONS="-vf ${TONEMAP_FILTER}"
+    else
+        # Append to existing filters, removing the first '-vf '
+        VIDEO_FILTER_OPTIONS="${VIDEO_FILTER_OPTIONS},${TONEMAP_FILTER}"
+    fi
+fi
+
 # Construct audio options
 AUDIO_OPTIONS=""
 if [ "$AUDIO_CODEC" == "copy" ]; then
